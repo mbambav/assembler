@@ -1,0 +1,165 @@
+Data movement:
+    load  - load data from memory to register
+    store - store data from register to memory
+    move  - move data from one register to another
+    push  - push data to stack
+    pop   - pop data from stack
+    swap  - swap data between two registers
+
+Arithmetic:
+    add - add two registers
+    sub - subtract two registers
+    mul - multiply two registers
+    div - divide two registers
+    mod - modulo two registers
+    inc - increment a register
+    dec - decrement a register
+
+Bitwise:
+    and        - bitwise and two registers
+    or         - bitwise or two registers
+    xor        - bitwise xor two registers
+    not        - bitwise not a register
+    shiftLeft  - shift left a register
+    shiftRight - shift right a register
+
+Comparison:
+    cmp - compare two registers
+    eq  - equal
+    ne  - not equal
+
+control flow:
+    jmp   - jump to a label
+    je    - jump if equal
+    jne   - jump if not equal
+    jg    - jump if greater
+    jge   - jump if greater or equal
+    jl    - jump if less
+    jle   - jump if less or equal
+    while - while loop
+    call  - call a function
+    ret   - return from a function
+
+Stack and function:
+    enter - enter a function
+    leave - leave a function
+    nop   - no operation
+
+Memory management:
+    alloc  - allocate memory
+    free   - free memory
+    memset - set memory
+    memcpy - copy memory
+
+System:
+    stop    - stop the VM
+    debug   - print debug information
+    syscall - call a system function
+
+
+
+//adding two numbers
+```assembly
+    load r1, 0x10
+    load r2, 0x20
+    add r3, r1, r2
+    store r3, 0x30
+    stop
+```
+
+//looping and printing count from 0 to 9
+```assembly
+    load r1, 0x0
+    load r2, 0x9
+    while:
+        cmp r1, r2
+        jg end
+        push r1
+        call print
+        pop r1
+        inc r1
+        jmp while
+    end:
+    stop
+
+    print:
+        push r1
+        syscall print
+        pop r1
+        ret
+```
+
+//function call with loop
+```assembly
+    load r1, 0x0
+    load r2, 0x9
+    call loop
+    stop
+
+    loop:
+        enter
+        push r1
+        push r2
+        while:
+            cmp r1, r2
+            jg end
+            push r1
+            call print
+            pop r1
+            inc r1
+            jmp while
+        end:
+        leave
+        ret
+
+    print:
+        enter
+        push r1
+        syscall print
+        pop r1
+        leave
+        ret
+```
+
+//Bitwise operations
+```assembly
+    load r1, 0x10
+    load r2, 0x20
+    and r3, r1, r2
+    or r4, r1, r2
+    xor r5, r1, r2
+    not r6, r1
+    shiftLeft r7, r1
+    shiftRight r8, r1
+    stop
+```
+// stack manipulation
+```assembly
+    load r1, 0x10
+    push r1
+    pop r2
+    swap r1, r2
+    stop
+```
+// recursive function call
+```assembly
+    load r1, 0x5
+    call fact
+    stop
+
+    fact:
+        enter
+        push r1
+        load r2, 0x1
+        cmp r1, r2
+        je end
+        dec r1
+        push r1
+        call fact
+        pop r1
+        mul r1, r1, r1
+        end:
+        leave
+        ret
+```
+
