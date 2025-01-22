@@ -110,7 +110,7 @@ std::map<std::string, TokenType> mapping{
 
 
 struct Token {
-    const std::string_view data;
+    const std::string data;
     const std::string_view file;
     size_t                 line;
     size_t                 column;
@@ -129,7 +129,7 @@ class Lexer {
   public:
     Lexer(std::string_view file);
     TokenList tokenize();
-    TokenType get_token_type(std::string word);
+    Token get_token_type(const std::string& word);
 };
 
 // define literals

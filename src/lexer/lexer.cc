@@ -6,7 +6,6 @@
 
 #include <cstdio>
 #include <iostream>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 namespace Lexer {
@@ -52,76 +51,113 @@ TokenList Lexer::tokenize() {
         if (i + 1 < this->data.size()) {
             switch (this->data[i + 1]) {
                 case ' ':
-                case '\n': {
+                case '\n':
                     word += c;
-                    get_token_type(word);
+                    tokens.emplace_back(get_token_type(word));
                     word = "";
                     i++;
                     break;
-                }
+                case '/':
+                    if (((i + 2) < this->data.size()) and this->data[i + 2] == '/') {
+                        size_t j = i;
+                        while (j < this->data.size() and this->data[j] != '\n') {
+                            word += c;
+                        }
+                        i = j;
+                    }
+                    tokens.emplace_back(get_token_type(word));
+                    break;
                 default:
                     word += c;
                     break;
             }
         } else {
             word += c;
-            get_token_type(word);
+            tokens.emplace_back(get_token_type(word));
             word = "";
             break;
         }
     }
+
+    std::cout << "comment type: " << std::to_string(int(mapping["comment"])) << "\n";
+    std::cout << "comment type: " << std::to_string(int(mapping["comment"])) << "\n";
+    for (auto &i : tokens) {
+        std::cout << "tok: " << std::to_string(int(i.type)) << " \"" << std::string(i.data) << "\"\n";
+    }
+    
 }
 
-TokenType Lexer::get_token_type(std::string word) {
-    auto elm = mapping.find(word);
+Token Lexer::get_token_type(const std::string& word) {
+    auto             elm  = mapping.find(word);
+    size_t           line = 0;
+    size_t           col  = 0;
+    std::string_view file = "";
 
     if (elm != mapping.end()) {
-        return elm->second;
+        return {.data = word, .file = file, .line = line, .column = col, .type = elm->second};
     } else {
         for (auto &literal : literals) {
             if (std::regex_match(word, literal)) {
-                return TokenType::LITERAL;
+                return {.data   = word,
+                        .file   = file,
+                        .line   = line,
+                        .column = col,
+                        .type   = TokenType::LITERAL};
             }
         }
 
         for (auto &newline : newlines) {
             if (std::regex_match(word, newline)) {
-                return TokenType::NEWLINE;
+                return {.data   = word,
+                        .file   = file,
+                        .line   = line,
+                        .column = col,
+                        .type   = TokenType::NEWLINE};
             }
         }
 
         for (auto &register_ : registers) {
             if (std::regex_match(word, register_)) {
-                return TokenType::REGISTER;
+                return {.data   = word,
+                        .file   = file,
+                        .line   = line,
+                        .column = col,
+                        .type   = TokenType::REGISTER};
             }
         }
 
         for (auto &string_ : strings) {
             if (std::regex_match(word, string_)) {
-                return TokenType::STRING;
+                return {.data   = word,
+                        .file   = file,
+                        .line   = line,
+                        .column = col,
+                        .type   = TokenType::STRING};
             }
         }
 
         for (auto &label : labels) {
             if (std::regex_match(word, label)) {
-                return TokenType::LABEL;
+                return {.data   = word,
+                        .file   = file,
+                        .line   = line,
+                        .column = col,
+                        .type   = TokenType::LABEL};
             }
         }
 
         for (auto &comment : comments) {
             if (std::regex_match(word, comment)) {
-                return TokenType::COMMENT;
-            }
-        }
-
-        for (auto &unk : unknown) {
-            if (std::regex_match(word, unk)) {
-                return TokenType::UNKNOWN;
+                return {.data   = word,
+                        .file   = file,
+                        .line   = line,
+                        .column = col,
+                        .type   = TokenType::COMMENT};
             }
         }
     }
 
-    return TokenType::UNKNOWN;
+    return {.data = word, .file = file, .line = line, .column = col, .type = TokenType::UNKNOWN};
 }
 }  // namespace Lexer
 
