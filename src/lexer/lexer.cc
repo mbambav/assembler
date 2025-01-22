@@ -1,8 +1,15 @@
 #include "lexer.hh"
-
 #include <fcntl.h>
-#include <sys/mman.h>
+#include <handleapi.h>
+#include <filesystem> 
+
+#ifdef _WIN32
+#include <io.h>
+#include <windows.h>
+#else
 #include <unistd.h>
+#include <sys/mman.h>
+#endif
 
 #include <cstdio>
 #include <iostream>
@@ -11,28 +18,94 @@
 namespace Lexer {
 Lexer::Lexer(std::string_view file) {
     this->file = file;
-    // read the contents of the file and store it in data
-    int fd = open(file.data(), O_RDONLY);
-    if (fd == -1) {
-        std::cerr << "failed to open file\n";
-        std::exit(1000);
-    }
+    std::filesystem::path pathobj(file);
+    std::string file_name = pathobj.filename().string();
+    std::wstring widestr = std::wstring(file_name.begin(),file_name.end());
+    #if defined(__APPLE__) || defined(__linux__) || defined(__unix__) || defined(__MACH__)
+        // read the contents of the file and store it in data
+        int fd = open(file.data(), O_RDONLY);
+        if (fd == -1) {
+            std::cerr << "failed to open file\n";
+            std::exit(1000);
+        }
 
-    off_t file_size = lseek(fd, 0, SEEK_END);
-    if (file_size == -1) {
+        off_t file_size = lseek(fd, 0, SEEK_END);
+        if (file_size == -1) {
+            close(fd);
+            std::cerr << "failed to get file size\n";
+            std::exit(2000);
+        }
+
+        void *map = mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
+        if (map == MAP_FAILED) {
+            close(fd);
+            std::cerr << "failed to map\n";
+            std::exit(3000);
+        }
         close(fd);
-        std::cerr << "failed to get file size\n";
-        std::exit(2000);
-    }
+    #elif defined(_WIN32)
+        HANDLE file_handle = CreateFileW(
+            widestr.c_str(),
+            GENERIC_READ,
+            0,
+            nullptr,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            nullptr
+        );
 
-    void *map = mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    if (map == MAP_FAILED) {
-        close(fd);
-        std::cerr << "failed to map\n";
-        std::exit(3000);
-    }
+        if (file_handle == INVALID_HANDLE_VALUE){
+            std::cerr << "Failed to open file\n";
+            std::exit(100);
+        }
 
-    close(fd);
+        LARGE_INTEGER size;
+        if (!GetFileSizeEx(file_handle, &size)){
+            std::cerr << "could not get file size\n";
+            CloseHandle(file_handle);
+            std::exit(200);
+        }
+
+        size_t file_size = static_cast<size_t>(size.QuadPart);
+        
+        HANDLE file_mapping = CreateFileMapping(
+            file_handle,
+            nullptr,
+            PAGE_READONLY,
+            0,
+            0,
+            nullptr
+        );
+
+        if (!file_mapping){
+            std::cerr << "could not create file mapping\n";
+            CloseHandle(file_handle);
+            std::exit(300);
+        }
+
+        void* map = MapViewOfFile(
+            file_mapping,
+            FILE_MAP_READ,
+            0,
+            0,
+            0
+        );
+
+        if(!map){
+            std::cerr << "failed to map view of file\n";
+            CloseHandle(file_handle);
+            CloseHandle(file_mapping);
+            std::exit(400);
+        }
+
+        CloseHandle(file_handle);
+        CloseHandle(file_mapping);
+
+
+    #else
+        std::cerr<<"unknow operating system\n";
+        std::exit(1);
+    #endif
 
     this->data = std::string_view(static_cast<const char *>(map), file_size);
 }
@@ -58,9 +131,9 @@ TokenList Lexer::tokenize() {
                     i++;
                     break;
                 case '/':
-                    if (((i + 2) < this->data.size()) and (this->data[i + 2] == '/' || this->data[i]=='/')) {
+                    if (((i + 2) < this->data.size()) && (this->data[i + 2] == '/' || this->data[i]=='/')) {
                         size_t j = i;
-                        while (j < this->data.size() and this->data[j] != '\n') {
+                        while (j < this->data.size() && this->data[j] != '\n') {
                             c = this->data[j];
                             word += c;
                             j++;
