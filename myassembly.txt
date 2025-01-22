@@ -14,7 +14,6 @@ Arithmetic:
     mod - modulo two registers
     inc - increment a register
     dec - decrement a register
-
 Bitwise:
     and        - bitwise and two registers
     or         - bitwise or two registers
