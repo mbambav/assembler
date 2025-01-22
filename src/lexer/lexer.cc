@@ -58,14 +58,17 @@ TokenList Lexer::tokenize() {
                     i++;
                     break;
                 case '/':
-                    if (((i + 2) < this->data.size()) and this->data[i + 2] == '/') {
+                    if (((i + 2) < this->data.size()) and (this->data[i + 2] == '/' || this->data[i]=='/')) {
                         size_t j = i;
                         while (j < this->data.size() and this->data[j] != '\n') {
+                            c = this->data[j];
                             word += c;
+                            j++;
                         }
                         i = j;
                     }
                     tokens.emplace_back(get_token_type(word));
+                    word = "";
                     break;
                 default:
                     word += c;
