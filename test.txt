@@ -1,4 +1,28 @@
-load r 10
-load r2 20
-// hello
-laod
+load r1, 0x0
+    load r2, 0x9
+    call .loop
+    stop
+
+    loop:
+        enter
+        push r1
+        push r2
+        while:
+            cmp r1, r2
+            jg .end
+            push r1
+            call .print
+            pop r1
+            inc r1
+            jmp while
+        end:
+        leave
+        ret
+
+    print:
+        enter
+        push r1
+        syscall .print
+        pop r1
+        leave
+        ret
