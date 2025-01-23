@@ -66,11 +66,12 @@ enum class TokenType {
     DEBUG,
     SYS,
     LITERAL,
-    NEWLINE,
     REGISTER,
+    COMMA,
     STRING,
     COMMENT,
     LABEL,
+    LABEL_CALL,
     UNKNOWN
 };
 
@@ -114,11 +115,12 @@ std::map<std::string, TokenType> mapping{
     {"debug", TokenType::DEBUG},
     {"sys", TokenType::SYS},
     {"literal", TokenType::LITERAL},
-    {"newline", TokenType::NEWLINE},
     {"register", TokenType::REGISTER},
     {"string", TokenType::STRING},
+    {"comma", TokenType::COMMA},
     {"comment", TokenType::COMMENT},
     {"label", TokenType::LABEL},
+    {"label_call", TokenType::LABEL_CALL},
     {"unknown", TokenType::UNKNOWN},
 };
 
@@ -153,11 +155,11 @@ const std::regex literals[] = {
     std::regex("0b[01]+"),
 };
 
-// define newlines
-const std::regex newlines[] = {std::regex("\n")};
-
 // define registers
 const std::regex registers[] = {std::regex("r[0-9]+")};
+
+// define commas
+const std::regex commas[] = {std::regex(",")};
 
 // define strings
 const std::regex strings[] = {std::regex("\".*\"")};
@@ -165,10 +167,11 @@ const std::regex strings[] = {std::regex("\".*\"")};
 // define labels
 const std::regex labels[] = {std::regex("[a-zA-Z_][a-zA-Z0-9_]*:")};
 
+//define label calls. they start with a .
+const std::regex label_calls[] = {std::regex("\\.[a-zA-Z_][a-zA-Z0-9_]*")};
+
 // define comments using //
 const std::regex comments[] = {std::regex("//.*")};
 
-// define unknown
-const std::regex unknown[] = {std::regex(".+")};
 }  // namespace Lexer
 #endif  // !TOKEN_TYPES_HH

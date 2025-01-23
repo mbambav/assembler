@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <iostream>
+
 namespace Lexer {
 Lexer::Lexer(std::string_view file) {
     this->file = file;
@@ -90,11 +91,21 @@ TokenList Lexer::tokenize() {
         char cur_ch = data[i];
 
         switch (cur_ch) {
-            case ' ': {
-                if (!word.empty()) {
-                    tokens.emplace_back(get_token_type(word));
-                    word = "";
+            case ',': {
+                if (word.empty()) {
+                    break;
                 }
+                tokens.emplace_back(get_token_type(word));
+                tokens.emplace_back(get_token_type(","));
+                word = "";
+                break;
+            }
+            case ' ': {
+                if (word.empty()) {
+                    break;
+                }
+                tokens.emplace_back(get_token_type(word));
+                word = "";
                 break;
             }
             case '\r': {
@@ -105,27 +116,31 @@ TokenList Lexer::tokenize() {
                 break;
             }
             case '\n': {
-                if (word.length() != 0) {
-                    tokens.emplace_back(get_token_type(word));
-                    word = "";
+                if (word.empty()) {
+                    break;
                 }
+                tokens.emplace_back(get_token_type(word));
+                word = "";
                 break;
             }
             case '/': {
-                if (i + 1 < max_length && data[i + 1] == '/') {
-                    while (i < max_length) {
-                        cur_ch = data[i];
-                        if (cur_ch == '\n' || cur_ch == '\r') {
-                            goto line_ending_handling;
-                            break;
-                        } else
-                            word += cur_ch;
-                        ++i;
-                    }
-                    tokens.emplace_back(get_token_type(word));
-                    word = "";
+                if (i + 1 > max_length && data[i + 1] != '/') {
                     break;
                 }
+                while (i < max_length) {
+                    cur_ch = data[i];
+                    if (cur_ch == '\n' || cur_ch == '\r') {
+                        goto line_ending_handling;
+                        break;
+                    }
+
+                    word += cur_ch;
+                    ++i;
+                }
+
+                tokens.emplace_back(get_token_type(word));
+                word = "";
+                break;
             }
 
             default:
@@ -165,16 +180,6 @@ Token Lexer::get_token_type(const std::string &word) {
             }
         }
 
-        for (auto &newline : newlines) {
-            if (std::regex_match(word, newline)) {
-                return {.data   = word,
-                        .file   = file,
-                        .line   = line,
-                        .column = col,
-                        .type   = TokenType::NEWLINE};
-            }
-        }
-
         for (auto &register_ : registers) {
             if (std::regex_match(word, register_)) {
                 return {.data   = word,
@@ -184,10 +189,19 @@ Token Lexer::get_token_type(const std::string &word) {
                         .type   = TokenType::REGISTER};
             }
         }
+        for (auto &comma : commas) {
+            if (std::regex_match(word, comma)) {
+                return {.data   = word,
+                        .file   = file,
+                        .line   = line,
+                        .column = col,
+                        .type   = TokenType::COMMA};
+            }
+        }
 
         for (auto &string_ : strings) {
             if (std::regex_match(word, string_)) {
-                return {.data   = word,
+                return {.data   = word.substr(1, word.length() - 2),
                         .file   = file,
                         .line   = line,
                         .column = col,
@@ -197,11 +211,21 @@ Token Lexer::get_token_type(const std::string &word) {
 
         for (auto &label : labels) {
             if (std::regex_match(word, label)) {
-                return {.data   = word,
+                return {.data   = word.substr(0, word.length() - 1),
                         .file   = file,
                         .line   = line,
                         .column = col,
                         .type   = TokenType::LABEL};
+            }
+        }
+
+        for(auto &label_call : label_calls) {
+            if (std::regex_match(word, label_call)) {
+                return {.data   = word,
+                        .file   = file,
+                        .line   = line,
+                        .column = col,
+                        .type   = TokenType::LABEL_CALL};
             }
         }
 
