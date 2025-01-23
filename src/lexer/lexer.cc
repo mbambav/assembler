@@ -1,22 +1,7 @@
 #include "lexer.hh"
 
-#include <fcntl.h>
-
 #include <filesystem>
-
-#ifdef _WIN32
-#include <handleapi.h>
-#include <io.h>
-#include <windows.h>
-#else
-#include <sys/mman.h>
-#include <unistd.h>
-#endif
-
-#include <cstdio>
 #include <iostream>
-#include <string>
-#include <string_view>
 namespace Lexer {
 Lexer::Lexer(std::string_view file) {
     this->file = file;
@@ -106,14 +91,14 @@ TokenList Lexer::tokenize() {
 
         switch (cur_ch) {
             case ' ': {
-                if (!word.empty()){
+                if (!word.empty()) {
                     tokens.emplace_back(get_token_type(word));
                     word = "";
                 }
                 break;
             }
             case '\r': {
-                line_ending_handling:
+            line_ending_handling:
                 if (i + 1 > max_length || data[i + 1] != '\n') {
                     word += cur_ch;
                 }
@@ -127,17 +112,19 @@ TokenList Lexer::tokenize() {
                 break;
             }
             case '/': {
-                if (i+1<max_length && data[i+1] == '/'){
-                    while (i<max_length){
+                if (i + 1 < max_length && data[i + 1] == '/') {
+                    while (i < max_length) {
                         cur_ch = data[i];
-                        if (cur_ch == '\n' || cur_ch == '\r'){
+                        if (cur_ch == '\n' || cur_ch == '\r') {
                             goto line_ending_handling;
                             break;
-                        } else word += cur_ch;
+                        } else
+                            word += cur_ch;
                         ++i;
                     }
                     tokens.emplace_back(get_token_type(word));
                     word = "";
+                    break;
                 }
             }
 
@@ -146,7 +133,9 @@ TokenList Lexer::tokenize() {
                 break;
         }
     }
-    
+    if (!word.empty()) {
+        tokens.emplace_back(get_token_type(word));
+    }
 
     std::cout << "comment type: " << std::to_string(int(mapping["comment"])) << "\n";
     std::cout << "comment type: " << std::to_string(int(mapping["comment"])) << "\n";

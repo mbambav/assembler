@@ -1,12 +1,26 @@
 #ifndef TOKEN_TYPES_HH
 #define TOKEN_TYPES_HH
-#include <csetjmp>
-#include <functional>
+
 #include <map>
 #include <regex>
 #include <string>
 #include <string_view>
 #include <vector>
+#include <fcntl.h>
+
+
+
+#ifdef _WIN32
+#include <handleapi.h>
+#include <io.h>
+#include <windows.h>
+#else
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
+
+#include <cstdio>
+
 
 namespace Lexer {
 struct Token;

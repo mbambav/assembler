@@ -1,4 +1,9 @@
-load r 10
-load r2 20
-// hello
-laod
+    load  
+    store 
+    move  
+    push  
+    pop   
+    swap  
+    add
+    label:
+    //thing
