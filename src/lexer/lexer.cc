@@ -1,14 +1,16 @@
 #include "lexer.hh"
+
 #include <fcntl.h>
-#include <handleapi.h>
-#include <filesystem> 
+
+#include <filesystem>
 
 #ifdef _WIN32
+#include <handleapi.h>
 #include <io.h>
 #include <windows.h>
 #else
-#include <unistd.h>
 #include <sys/mman.h>
+#include <unistd.h>
 #endif
 
 #include <cstdio>
@@ -19,93 +21,72 @@ namespace Lexer {
 Lexer::Lexer(std::string_view file) {
     this->file = file;
     std::filesystem::path pathobj(file);
-    std::string file_name = pathobj.filename().string();
-    std::wstring widestr = std::wstring(file_name.begin(),file_name.end());
-    #if defined(__APPLE__) || defined(__linux__) || defined(__unix__) || defined(__MACH__)
-        // read the contents of the file and store it in data
-        int fd = open(file.data(), O_RDONLY);
-        if (fd == -1) {
-            std::cerr << "failed to open file\n";
-            std::exit(1000);
-        }
+    std::string           file_name = pathobj.filename().string();
+    std::wstring          widestr   = std::wstring(file_name.begin(), file_name.end());
+#if defined(__APPLE__) || defined(__linux__) || defined(__unix__) || defined(__MACH__)
+    // read the contents of the file and store it in data
+    int fd = open(file.data(), O_RDONLY);
+    if (fd == -1) {
+        std::cerr << "failed to open file\n";
+        std::exit(1000);
+    }
 
-        off_t file_size = lseek(fd, 0, SEEK_END);
-        if (file_size == -1) {
-            close(fd);
-            std::cerr << "failed to get file size\n";
-            std::exit(2000);
-        }
-
-        void *map = mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
-        if (map == MAP_FAILED) {
-            close(fd);
-            std::cerr << "failed to map\n";
-            std::exit(3000);
-        }
+    off_t file_size = lseek(fd, 0, SEEK_END);
+    if (file_size == -1) {
         close(fd);
-    #elif defined(_WIN32)
-        HANDLE file_handle = CreateFileW(
-            widestr.c_str(),
-            GENERIC_READ,
-            0,
-            nullptr,
-            OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL,
-            nullptr
-        );
+        std::cerr << "failed to get file size\n";
+        std::exit(2000);
+    }
 
-        if (file_handle == INVALID_HANDLE_VALUE){
-            std::cerr << "Failed to open file\n";
-            std::exit(100);
-        }
+    void *map = mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (map == MAP_FAILED) {
+        close(fd);
+        std::cerr << "failed to map\n";
+        std::exit(3000);
+    }
+    close(fd);
+#elif defined(_WIN32)
+    HANDLE file_handle = CreateFileW(
+        widestr.c_str(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 
-        LARGE_INTEGER size;
-        if (!GetFileSizeEx(file_handle, &size)){
-            std::cerr << "could not get file size\n";
-            CloseHandle(file_handle);
-            std::exit(200);
-        }
+    if (file_handle == INVALID_HANDLE_VALUE) {
+        std::cerr << "Failed to open file\n";
+        std::exit(100);
+    }
 
-        size_t file_size = static_cast<size_t>(size.QuadPart);
-        
-        HANDLE file_mapping = CreateFileMapping(
-            file_handle,
-            nullptr,
-            PAGE_READONLY,
-            0,
-            0,
-            nullptr
-        );
+    LARGE_INTEGER size;
+    if (!GetFileSizeEx(file_handle, &size)) {
+        std::cerr << "could not get file size\n";
+        CloseHandle(file_handle);
+        std::exit(200);
+    }
 
-        if (!file_mapping){
-            std::cerr << "could not create file mapping\n";
-            CloseHandle(file_handle);
-            std::exit(300);
-        }
+    size_t file_size = static_cast<size_t>(size.QuadPart);
 
-        void* map = MapViewOfFile(
-            file_mapping,
-            FILE_MAP_READ,
-            0,
-            0,
-            0
-        );
+    HANDLE file_mapping = CreateFileMapping(file_handle, nullptr, PAGE_READONLY, 0, 0, nullptr);
 
-        if(!map){
-            std::cerr << "failed to map view of file\n";
-            CloseHandle(file_handle);
-            CloseHandle(file_mapping);
-            std::exit(400);
-        }
+    if (!file_mapping) {
+        std::cerr << "could not create file mapping\n";
+        CloseHandle(file_handle);
+        std::exit(300);
+    }
 
+    void *map = MapViewOfFile(file_mapping, FILE_MAP_READ, 0, 0, 0);
+
+    if (!map) {
+        std::cerr << "failed to map view of file\n";
         CloseHandle(file_handle);
         CloseHandle(file_mapping);
+        std::exit(400);
+    }
 
+    CloseHandle(file_handle);
+    CloseHandle(file_mapping);
 
-    #else
-        std::cerr<<"unknow operating system\n";
-        std::exit(1);
-    #endif
+#else
+    std::cerr << "unknow operating system\n";
+    std::exit(1);
+#endif
 
     this->data = std::string_view(static_cast<const char *>(map), file_size);
 }
@@ -116,54 +97,67 @@ TokenList Lexer::tokenize() {
     // add to word
     // check if it is a tokentype
     // check if it is valid tokentype
-    int         i    = 0;
-    std::string word = "";
-    for (size_t i = 0; i < this->data.size(); ++i) {
-        char c = this->data[i];
+    size_t      i          = 0;
+    size_t      max_length = data.size();
+    std::string word       = "";
 
-        if (i + 1 < this->data.size()) {
-            switch (this->data[i + 1]) {
-                case ' ':
-                case '\n':
-                    word += c;
+    for (; i < max_length; i++) {
+        char cur_ch = data[i];
+
+        switch (cur_ch) {
+            case ' ': {
+                if (!word.empty()){
                     tokens.emplace_back(get_token_type(word));
                     word = "";
-                    i++;
-                    break;
-                case '/':
-                    if (((i + 2) < this->data.size()) && (this->data[i + 2] == '/' || this->data[i]=='/')) {
-                        size_t j = i;
-                        while (j < this->data.size() && this->data[j] != '\n') {
-                            c = this->data[j];
-                            word += c;
-                            j++;
-                        }
-                        i = j;
+                }
+                break;
+            }
+            case '\r': {
+                line_ending_handling:
+                if (i + 1 > max_length || data[i + 1] != '\n') {
+                    word += cur_ch;
+                }
+                break;
+            }
+            case '\n': {
+                if (word.length() != 0) {
+                    tokens.emplace_back(get_token_type(word));
+                    word = "";
+                }
+                break;
+            }
+            case '/': {
+                if (i+1<max_length && data[i+1] == '/'){
+                    while (i<max_length){
+                        cur_ch = data[i];
+                        if (cur_ch == '\n' || cur_ch == '\r'){
+                            goto line_ending_handling;
+                            break;
+                        } else word += cur_ch;
+                        ++i;
                     }
                     tokens.emplace_back(get_token_type(word));
                     word = "";
-                    break;
-                default:
-                    word += c;
-                    break;
+                }
             }
-        } else {
-            word += c;
-            tokens.emplace_back(get_token_type(word));
-            word = "";
-            break;
+
+            default:
+                word += cur_ch;
+                break;
         }
     }
+    
 
     std::cout << "comment type: " << std::to_string(int(mapping["comment"])) << "\n";
     std::cout << "comment type: " << std::to_string(int(mapping["comment"])) << "\n";
     for (auto &i : tokens) {
-        std::cout << "tok: " << std::to_string(int(i.type)) << " \"" << std::string(i.data) << "\"\n";
+        std::cout << "tok: " << std::to_string(int(i.type)) << " \"" << std::string(i.data)
+                  << "\"\n";
     }
-    
+    return tokens;
 }
 
-Token Lexer::get_token_type(const std::string& word) {
+Token Lexer::get_token_type(const std::string &word) {
     auto             elm  = mapping.find(word);
     size_t           line = 0;
     size_t           col  = 0;
