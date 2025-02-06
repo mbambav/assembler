@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <iostream>
 #include <type_traits>
+#include "../parser/parser.hh"
 
 namespace assembler {
 namespace lexer {
@@ -284,6 +285,10 @@ namespace lexer {
 
 int main() {
     assembler::lexer::Lexer lexer("/Volumes/Projects/assembly-lang/test.txt");
-    lexer.tokenize();
+    assembler::parser::AssemblyParser parser;
+    auto tokenised_list = lexer.tokenize();
+    parser.parse(tokenised_list);
+    
+
     return 0;
 }
