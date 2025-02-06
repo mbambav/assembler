@@ -9,7 +9,7 @@ std::optional<lexer::Token> TokenIterator::get(ssize_t n) const {
         return std::nullopt;
     }
 
-    index += n;
+    index += n+1;
     return *(iter + index);
 }
 

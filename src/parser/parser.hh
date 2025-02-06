@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <iostream>
+#include <optional>
+#include <ostream>
 
 #include "../lexer/lexer.hh"
 #include "iterator.hh"
@@ -45,9 +48,9 @@ public:
     // Output: A vector of parsed instructions
     InstructionSet parse(const lexer::TokenList &assemblyCode);
 
-    Instruction get_operands(const lexer::Token &tkn,const int line, iterator::TokenIterator gen);
+    Instruction get_operands(const lexer::Token &tkn,const int line, iterator::TokenIterator &gen);
 
-    Instruction get_label_code(const lexer::Token &tkn, int line, iterator::TokenIterator gen);
+    LabelTable get_label_code(const lexer::Token &tkn, int &line, iterator::TokenIterator &gen);
 
     // Resolves labels in the parsed program
     // Input: A vector of instructions with potential labels
